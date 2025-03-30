@@ -13,17 +13,16 @@ ARP(Address Resolution Protocol) 스푸핑 공격을 구현한 도구
 
 - 공격자의 MAC/IP 주소 확인
 - Sender의 MAC 주소 획득 (ARP Request 사용)
-- Gateway의 MAC 주소 획득
+- Target의 MAC 주소 획득
 
 2. ARP 테이블 감염
 
 - Sender에게 위조된 ARP Reply 전송
-- Gateway의 MAC 주소를 공격자의 MAC으로 속임
+- Target의 MAC 주소를 공격자의 MAC으로 속임
 
 3. 패킷 가로채기
 
-- Sender -> Gateway 패킷 캡처
-- Gateway -> Sender 패킷 캡처
+- Sender -> Target 패킷 캡처
 - 캡처된 패킷 수정 및 전달
 
 
@@ -45,7 +44,7 @@ ARP(Address Resolution Protocol) 스푸핑 공격을 구현한 도구
 
 2. 다중 호스트 감염
 
-&emsp;```./arp-spoofing wlan0 192.168.0.2 192.168.0.1 192.168.0.3 192.168.0.1```
+&emsp;```./arp-spoofing wlan0 192.168.0.2 192.168.0.1 192.168.0.1 192.168.0.2```
 
 
 ## Technical Details
