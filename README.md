@@ -28,8 +28,9 @@ ARP(Address Resolution Protocol) 스푸핑 공격을 구현한 도구
 
 
 ## Usage
-| syntax: ./arp-spoofing <interface> <sender ip> <target ip> [<sender ip 2> <target ip 2> ...]
-sample: ./arp-spoofing wlan0 192.168.0.2 192.168.0.1
+&emsp;``` syntax: ./arp-spoofing <interface> <sender ip> <target ip> [<sender ip 2> <target ip 2> ...] ```
+
+&emsp;``` sample: ./arp-spoofing wlan0 192.168.0.2 192.168.0.1 ```
 
 ### Parameters
 - interface: 사용할 네트워크 인터페이스
@@ -40,11 +41,11 @@ sample: ./arp-spoofing wlan0 192.168.0.2 192.168.0.1
 
 1. 단일 호스트 감염
 
-./arp-spoofing wlan0 192.168.0.2 192.168.0.1
+&emsp;```./arp-spoofing wlan0 192.168.0.2 192.168.0.1```
 
 2. 다중 호스트 감염
 
-./arp-spoofing wlan0 192.168.0.2 192.168.0.1 192.168.0.3 192.168.0.1
+&emsp;```./arp-spoofing wlan0 192.168.0.2 192.168.0.1 192.168.0.3 192.168.0.1```
 
 
 ## Technical Details
@@ -59,17 +60,22 @@ sample: ./arp-spoofing wlan0 192.168.0.2 192.168.0.1
 
 1. Ethernet Frame
 
-| Destination MAC (6) | Source MAC (6) | Type (2) | Payload |
+&emsp;&emsp;| Destination MAC (6) | Source MAC (6) | Type (2) | Payload |
 
 2. ARP Packet
 
-| Hardware Type (2) | Protocol Type (2) | HLen (1) | PLen (1) | Operation (2) |
-| Sender MAC (6) | Sender IP (4) | Target MAC (6) | Target IP (4) |
+&emsp;&emsp;| Hardware Type (2) | Protocol Type (2) | HLen (1) | PLen (1) | Operation (2) |
+
+&emsp;&emsp;| Sender MAC (6) | Sender IP (4) | Target MAC (6) | Target IP (4) |
 
 3. IP Packet
 
-| Version (4) | IHL (4) | ToS (8) | Total Length (16) |
-| Identification (16) | Flags (3) | Fragment Offset (13) |
-| TTL (8) | Protocol (8) | Header Checksum (16) |
-| Source IP Address (32) |
-| Destination IP Address (32) |
+&emsp;&emsp;| Version (4) | IHL (4) | ToS (8) | Total Length (16) |
+
+&emsp;&emsp;| Identification (16) | Flags (3) | Fragment Offset (13) |
+
+&emsp;&emsp;| TTL (8) | Protocol (8) | Header Checksum (16) |
+
+&emsp;&emsp;| Source IP Address (32) |
+
+&emsp;&emsp;| Destination IP Address (32) |
